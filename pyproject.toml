@@ -26,6 +26,11 @@ dependencies = [
     "packaging>=23",
 ]
 
+[project.urls]
+Homepage = "https://github.com/112345brian/dep-heal"
+Repository = "https://github.com/112345brian/dep-heal"
+Issues = "https://github.com/112345brian/dep-heal/issues"
+
 [tool.setuptools]
 packages = ["dep_heal", "dep_heal.adapters"]
 
