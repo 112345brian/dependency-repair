@@ -4,8 +4,8 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 
-from dep_heal.domain import InstallResult
-from dep_heal.ports import SourceError
+from dependency_repair.domain import InstallResult
+from dependency_repair.ports import SourceError
 
 
 @dataclass

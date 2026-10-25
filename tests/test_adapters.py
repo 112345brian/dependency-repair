@@ -7,12 +7,12 @@ from pathlib import Path
 
 import pytest
 
-from dep_heal.adapters.editable_source import EditableInstallSource, checkout_from_direct_url, editable_checkout
-from dep_heal.adapters.metadata_environment import MetadataEnvironment
-from dep_heal.adapters.pip_installer import PipInstaller
-from dep_heal.adapters.pyproject_source import PyprojectSource
-from dep_heal.adapters.terminal_console import TerminalConsole
-from dep_heal.ports import SourceError
+from dependency_repair.adapters.editable_source import EditableInstallSource, checkout_from_direct_url, editable_checkout
+from dependency_repair.adapters.metadata_environment import MetadataEnvironment
+from dependency_repair.adapters.pip_installer import PipInstaller
+from dependency_repair.adapters.pyproject_source import PyprojectSource
+from dependency_repair.adapters.terminal_console import TerminalConsole
+from dependency_repair.ports import SourceError
 
 
 def write_pyproject(root: Path, body: str) -> Path:

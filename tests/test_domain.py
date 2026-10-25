@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from dep_heal.domain import HealPolicy, InvalidRequirementError, find_unmet, parse_policy
+from dependency_repair.domain import RepairPolicy, InvalidRequirementError, find_unmet, parse_policy
 
 
 @pytest.mark.parametrize(
     "raw, expected",
-    [("auto", HealPolicy.AUTO), (" PROMPT ", HealPolicy.PROMPT), ("Off", HealPolicy.OFF),
+    [("auto", RepairPolicy.AUTO), (" PROMPT ", RepairPolicy.PROMPT), ("Off", RepairPolicy.OFF),
      (None, None), ("", None), ("yes", None), ("always", None)],
 )
 def test_parse_policy(raw, expected):

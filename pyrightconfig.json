@@ -21,7 +21,7 @@
   "strictSetInference": true,
   "pythonVersion": "3.11",
   "include": [
-    "src/dep_heal"
+    "src/dependency_repair"
   ],
   "exclude": [
     "**/__pycache__",

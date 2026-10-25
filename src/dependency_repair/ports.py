@@ -4,7 +4,7 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from typing import Protocol
 
-from dep_heal.domain import InstallResult
+from dependency_repair.domain import InstallResult
 
 
 class SourceError(Exception):

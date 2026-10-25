@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import cast
 from urllib.parse import unquote, urlparse
 
-from dep_heal.adapters.pyproject_source import PyprojectSource
+from dependency_repair.adapters.pyproject_source import PyprojectSource
 
 
 def checkout_from_direct_url(raw: str | None) -> Path | None:

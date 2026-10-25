@@ -5,7 +5,7 @@ import tomllib
 from pathlib import Path
 from typing import cast
 
-from dep_heal.ports import SourceError
+from dependency_repair.ports import SourceError
 
 
 class PyprojectSource:

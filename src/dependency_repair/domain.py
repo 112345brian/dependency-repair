@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from packaging.requirements import InvalidRequirement, Requirement
 
 
-class HealPolicy(enum.Enum):
+class RepairPolicy(enum.Enum):
     """What to do when requirements are unmet."""
 
     AUTO = "auto"  # install them, and say so
@@ -16,12 +16,12 @@ class HealPolicy(enum.Enum):
     OFF = "off"  # report them and the manual command; install nothing
 
 
-def parse_policy(raw: str | None) -> HealPolicy | None:
+def parse_policy(raw: str | None) -> RepairPolicy | None:
     """The policy named by ``raw`` (``auto``/``prompt``/``off``, any case), or None when absent or not one of them."""
     if raw is None:
         return None
     try:
-        return HealPolicy(raw.strip().lower())
+        return RepairPolicy(raw.strip().lower())
     except ValueError:
         return None
 
@@ -37,7 +37,7 @@ class Outcome(enum.Enum):
 
 
 @dataclass(frozen=True)
-class HealResult:
+class RepairResult:
     outcome: Outcome
     unmet: tuple[str, ...] = ()
     detail: str = ""

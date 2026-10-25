@@ -3,7 +3,7 @@ requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "dep-heal"
+name = "dependency-repair"
 version = "0.1.0"
 description = "Install the dependencies an editable install is missing, under an explicit policy (auto, prompt, off), through ports."
 readme = "README.md"
@@ -27,18 +27,18 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/112345brian/dep-heal"
-Repository = "https://github.com/112345brian/dep-heal"
-Issues = "https://github.com/112345brian/dep-heal/issues"
+Homepage = "https://github.com/112345brian/dependency-repair"
+Repository = "https://github.com/112345brian/dependency-repair"
+Issues = "https://github.com/112345brian/dependency-repair/issues"
 
 [tool.setuptools]
-packages = ["dep_heal", "dep_heal.adapters"]
+packages = ["dependency_repair", "dependency_repair.adapters"]
 
 [tool.setuptools.package-dir]
 "" = "src"
 
 [tool.setuptools.package-data]
-dep_heal = ["py.typed"]
+dependency_repair = ["py.typed"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
@@ -48,7 +48,7 @@ testpaths = ["tests"]
 # pyrightconfig.json -- regenerate with `archlint generate`, never edit by hand.
 [tool.archlint]
 python = "3.11"
-sources = ["src/dep_heal"]
+sources = ["src/dependency_repair"]
 source_roots = ["src"]
 exclude = ["__pycache__"]
 rings = ["domain", "ports", "application", "adapters", "composition"]
@@ -77,14 +77,14 @@ may_import = ["*"]
 external = ["@pure"]
 
 [tool.archlint.classify]
-"dep_heal" = "domain"
-"dep_heal.domain" = "domain"
-"dep_heal.ports" = "ports"
-"dep_heal.heal" = "application"
-"dep_heal.adapters" = "adapters"
-"dep_heal.adapters.*" = "adapters"
-"dep_heal.testing" = "adapters"
-"dep_heal.api" = "composition"
+"dependency_repair" = "domain"
+"dependency_repair.domain" = "domain"
+"dependency_repair.ports" = "ports"
+"dependency_repair.repair" = "application"
+"dependency_repair.adapters" = "adapters"
+"dependency_repair.adapters.*" = "adapters"
+"dependency_repair.testing" = "adapters"
+"dependency_repair.api" = "composition"
 
 [tool.archlint.practices]
 undeclared-imports = true

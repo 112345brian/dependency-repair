@@ -5,8 +5,8 @@ import importlib
 import sys
 from collections.abc import Sequence
 
-from dep_heal.domain import InstallResult
-from dep_heal.ports import CommandRunner
+from dependency_repair.domain import InstallResult
+from dependency_repair.ports import CommandRunner
 
 
 class PipInstaller:
