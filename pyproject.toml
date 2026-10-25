@@ -1,0 +1,85 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dep-heal"
+version = "0.1.0"
+description = "Install the dependencies an editable install is missing, under an explicit policy (auto, prompt, off), through ports."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Brian Powers" }]
+keywords = ["dependencies", "editable", "pipx", "pip", "startup", "drift"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Typing :: Typed",
+]
+dependencies = [
+    "packaging>=23",
+]
+
+[tool.setuptools]
+packages = ["dep_heal", "dep_heal.adapters"]
+
+[tool.setuptools.package-dir]
+"" = "src"
+
+[tool.setuptools.package-data]
+dep_heal = ["py.typed"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+# The architecture, enforced by archlint (`archlint check`). Generated configs: archlint-importlinter.toml, tach.toml,
+# pyrightconfig.json -- regenerate with `archlint generate`, never edit by hand.
+[tool.archlint]
+python = "3.11"
+sources = ["src/dep_heal"]
+source_roots = ["src"]
+exclude = ["__pycache__"]
+rings = ["domain", "ports", "application", "adapters", "composition"]
+type_checkers = ["pyright"]
+
+[tool.archlint.groups]
+pure = ["__future__", "collections", "dataclasses", "enum", "typing"]
+
+[tool.archlint.ring.domain]
+external = ["@pure", "packaging"]
+
+[tool.archlint.ring.ports]
+may_import = ["domain"]
+external = ["@pure"]
+
+[tool.archlint.ring.application]
+may_import = ["domain", "ports"]
+external = ["@pure"]
+
+[tool.archlint.ring.adapters]
+may_import = ["domain", "ports"]
+external = ["@pure", "importlib", "json", "pathlib", "re", "subprocess", "sys", "tomllib", "urllib"]
+
+[tool.archlint.ring.composition]
+may_import = ["*"]
+external = ["@pure"]
+
+[tool.archlint.classify]
+"dep_heal" = "domain"
+"dep_heal.domain" = "domain"
+"dep_heal.ports" = "ports"
+"dep_heal.heal" = "application"
+"dep_heal.adapters" = "adapters"
+"dep_heal.adapters.*" = "adapters"
+"dep_heal.testing" = "adapters"
+"dep_heal.api" = "composition"
+
+[tool.archlint.practices]
+undeclared-imports = true
