@@ -41,6 +41,7 @@ class RepairResult:
     outcome: Outcome
     unmet: tuple[str, ...] = ()
     detail: str = ""
+    packages: tuple[str, ...] = ()  # everything the install did (or would have) add, transitive ones included
 
     @property
     def satisfied(self) -> bool:
@@ -52,6 +53,14 @@ class RepairResult:
 class InstallResult:
     ok: bool
     detail: str = ""
+
+
+@dataclass(frozen=True)
+class InstallPlan:
+    """What installing some requirements would add."""
+
+    packages: tuple[str, ...] = ()  # ``name==version`` of every package, transitive ones included
+    known: bool = False  # False when the full list could not be worked out; ``packages`` is then empty
 
 
 class InvalidRequirementError(ValueError):

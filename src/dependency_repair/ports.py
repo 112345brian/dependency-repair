@@ -4,17 +4,18 @@ from __future__ import annotations
 from collections.abc import Callable, Sequence
 from typing import Protocol
 
-from dependency_repair.domain import InstallResult
+from dependency_repair.domain import InstallPlan, InstallResult
 
 
 class SourceError(Exception):
-    """The declared requirements exist but could not be read (unreadable file, malformed TOML)."""
+    """The declared requirements exist but could not be read (unreadable file, malformed TOML, unknown extra)."""
 
 
 class RequirementSource(Protocol):
-    def declared(self) -> Sequence[str] | None:
-        """The requirement strings this install should have, or None when this source has none to offer
-        (not an editable install, the checkout is gone). Raises ``SourceError`` when they exist but cannot be read."""
+    def declared(self, extras: Sequence[str]) -> Sequence[str] | None:
+        """The requirement strings this install should have: the base requirements plus those of each named extra.
+        None when this source has none to offer (not an editable install, the checkout is gone). Raises
+        ``SourceError`` when they exist but cannot be read, or an extra is not declared."""
         ...
 
 
@@ -33,6 +34,11 @@ class Environment(Protocol):
 
 
 class Installer(Protocol):
+    def plan(self, requirements: Sequence[str]) -> InstallPlan:
+        """Every package installing these requirements would add (transitive ones included), changing nothing.
+        Never raises: when the list cannot be worked out the plan says it is not known."""
+        ...
+
     def install(self, requirements: Sequence[str]) -> InstallResult:
         """Install the requirement strings. Never raises: a failure is ``InstallResult(ok=False)``."""
         ...

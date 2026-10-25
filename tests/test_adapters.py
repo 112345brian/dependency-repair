@@ -28,20 +28,20 @@ def direct_url(url: str, *, editable: bool = True) -> str:
 class TestPyprojectSource:
     def test_reads_the_dependency_list(self, tmp_path):
         path = write_pyproject(tmp_path, '[project]\nname="x"\ndependencies = ["a>=1", "b"]\n')
-        assert PyprojectSource(path).declared() == ["a>=1", "b"]
+        assert PyprojectSource(path).declared(()) == ["a>=1", "b"]
 
     def test_no_dependencies_key_is_an_empty_list(self, tmp_path):
-        assert PyprojectSource(write_pyproject(tmp_path, '[project]\nname="x"\n')).declared() == []
+        assert PyprojectSource(write_pyproject(tmp_path, '[project]\nname="x"\n')).declared(()) == []
 
     @pytest.mark.parametrize("body", ["[project\n", '[project]\ndependencies = "a"\n', "[project]\ndependencies = [1]\n"])
     def test_malformed_files_are_a_source_error_naming_the_file(self, tmp_path, body):
         path = write_pyproject(tmp_path, body)
         with pytest.raises(SourceError, match="pyproject.toml"):
-            PyprojectSource(path).declared()
+            PyprojectSource(path).declared(())
 
     def test_a_missing_file_is_a_source_error(self, tmp_path):
         with pytest.raises(SourceError):
-            PyprojectSource(tmp_path / "pyproject.toml").declared()
+            PyprojectSource(tmp_path / "pyproject.toml").declared(())
 
 
 class TestCheckoutFromDirectUrl:
@@ -69,18 +69,18 @@ class TestEditableInstallSource:
     def test_declared_comes_from_the_checkout_not_the_installed_metadata(self, tmp_path):
         write_pyproject(tmp_path, '[project]\nname="x"\ndependencies = ["new-dep>=2"]\n')
         source = EditableInstallSource("x", lambda _name: direct_url(tmp_path.as_uri()))
-        assert source.declared() == ["new-dep>=2"]
+        assert source.declared(()) == ["new-dep>=2"]
 
     def test_not_installed_or_not_editable_or_checkout_gone_offers_nothing(self, tmp_path):
-        assert EditableInstallSource("x", lambda _n: None).declared() is None
-        assert EditableInstallSource("x", lambda _n: direct_url(tmp_path.as_uri(), editable=False)).declared() is None
-        assert EditableInstallSource("x", lambda _n: direct_url(tmp_path.as_uri())).declared() is None  # no pyproject
+        assert EditableInstallSource("x", lambda _n: None).declared(()) is None
+        assert EditableInstallSource("x", lambda _n: direct_url(tmp_path.as_uri(), editable=False)).declared(()) is None
+        assert EditableInstallSource("x", lambda _n: direct_url(tmp_path.as_uri())).declared(()) is None  # no pyproject
         assert editable_checkout("x", lambda _n: direct_url(tmp_path.as_uri())) is None
 
     def test_a_broken_pyproject_in_the_checkout_is_loud(self, tmp_path):
         write_pyproject(tmp_path, "[project\n")
         with pytest.raises(SourceError):
-            EditableInstallSource("x", lambda _n: direct_url(tmp_path.as_uri())).declared()
+            EditableInstallSource("x", lambda _n: direct_url(tmp_path.as_uri())).declared(())
 
 
 class TestMetadataEnvironment:
@@ -136,3 +136,84 @@ class TestTerminalConsole:
         err = io.StringIO()
         TerminalConsole(io.StringIO(), err).say("hello")
         assert err.getvalue() == "hello\n"
+
+
+class TestPyprojectExtras:
+    BODY = (
+        '[project]\nname = "x"\ndependencies = ["base>=1"]\n'
+        '[project.optional-dependencies]\ntracker = ["flask>=3", "base>=1"]\nscoring = ["numpy"]\n'
+    )
+
+    def test_no_extras_is_the_base_list_only(self, tmp_path):
+        assert PyprojectSource(write_pyproject(tmp_path, self.BODY)).declared(()) == ["base>=1"]
+
+    def test_named_extras_are_added_in_order_without_duplicates(self, tmp_path):
+        source = PyprojectSource(write_pyproject(tmp_path, self.BODY))
+        assert source.declared(("tracker", "scoring")) == ["base>=1", "flask>=3", "numpy"]
+
+    def test_an_undeclared_extra_is_a_loud_error_naming_it(self, tmp_path):
+        source = PyprojectSource(write_pyproject(tmp_path, self.BODY))
+        with pytest.raises(SourceError, match="nope"):
+            source.declared(("nope",))
+
+    def test_an_undeclared_extra_with_no_groups_table_at_all_is_still_an_error(self, tmp_path):
+        source = PyprojectSource(write_pyproject(tmp_path, '[project]\nname = "x"\ndependencies = []\n'))
+        with pytest.raises(SourceError, match="tracker"):
+            source.declared(("tracker",))
+
+    def test_the_editable_source_passes_extras_through(self, tmp_path):
+        write_pyproject(tmp_path, self.BODY)
+        source = EditableInstallSource("x", lambda _n: direct_url(tmp_path.as_uri()))
+        assert source.declared(("scoring",)) == ["base>=1", "numpy"]
+
+
+def report(*pairs):
+    return json.dumps({"version": "1", "install": [{"metadata": {"name": n, "version": v}} for n, v in pairs]})
+
+
+def pip_that_writes(content, code=0, seen=None):
+    """A command runner that behaves like pip: writes ``content`` to the --report path and exits ``code``."""
+
+    def runner(argv):
+        if seen is not None:
+            seen.append(tuple(argv))
+        if content is not None and "--report" in argv:
+            Path(argv[list(argv).index("--report") + 1]).write_text(content, encoding="utf-8")
+        return code
+
+    return runner
+
+
+class TestPipPlan:
+    def test_lists_every_package_pip_would_install_transitive_ones_included(self):
+        seen: list[tuple[str, ...]] = []
+        runner = pip_that_writes(report(("flask", "3.0.0"), ("werkzeug", "3.0.1")), seen=seen)
+        plan = PipInstaller(runner, python="py").plan(["flask>=3"])
+        assert plan.known and plan.packages == ("flask==3.0.0", "werkzeug==3.0.1")
+        (argv,) = seen
+        assert argv[:7] == ("py", "-m", "pip", "install", "--disable-pip-version-check", "--dry-run", "--quiet")
+        assert argv[7] == "--report" and argv[-1] == "flask>=3"
+
+    def test_non_ascii_metadata_survives_because_the_report_is_read_as_utf_8(self):
+        plan = PipInstaller(pip_that_writes(report(("pkg-\u00f6", "1.0")))).plan(["x"])
+        assert plan.packages == ("pkg-\u00f6==1.0",)
+
+    @pytest.mark.parametrize(
+        "runner",
+        [pip_that_writes(report(("a", "1")), code=1), lambda _argv: None, pip_that_writes(None), pip_that_writes("not json"),
+         pip_that_writes("[]"), pip_that_writes("{}"), pip_that_writes(json.dumps({"install": [{"metadata": {"name": "a"}}]})),
+         pip_that_writes(json.dumps({"install": ["a"]}))],
+    )
+    def test_anything_unusable_is_an_unknown_plan_not_an_error(self, runner):
+        plan = PipInstaller(runner).plan(["a"])
+        assert not plan.known and plan.packages == ()
+
+    def test_an_empty_install_list_is_a_known_empty_plan(self):
+        plan = PipInstaller(pip_that_writes(report())).plan(["a"])
+        assert plan.known and plan.packages == ()
+
+    def test_the_temporary_report_is_removed(self):
+        seen: list[tuple[str, ...]] = []
+        PipInstaller(pip_that_writes(report(("a", "1")), seen=seen)).plan(["a"])
+        path = Path(seen[0][seen[0].index("--report") + 1])
+        assert not path.exists() and not path.parent.exists()

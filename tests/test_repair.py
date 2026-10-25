@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import pytest
 
-from dependency_repair.domain import RepairPolicy, InstallResult, Outcome
+from dependency_repair.domain import InstallPlan, InstallResult, Outcome, RepairPolicy
 from dependency_repair.repair import repair
 from dependency_repair.testing import FakeConsole, FakeEnvironment, FakeInstaller, FakeSource
 
@@ -102,3 +102,72 @@ def test_an_invalid_requirement_string_is_a_visible_check_failure():
 def test_an_empty_declared_list_is_up_to_date():
     result, _, _ = run(RepairPolicy.AUTO, source=FakeSource([]))
     assert result.outcome is Outcome.UP_TO_DATE
+
+
+PLAN = InstallPlan(("alpha==2.1.0", "gamma==0.3.0"), known=True)  # gamma is something alpha pulls in
+
+
+def test_the_prompt_lists_every_package_to_be_installed_including_transitive_ones():
+    result, installer, console = run(
+        RepairPolicy.PROMPT, installer=FakeInstaller(plan_result=PLAN), console=FakeConsole(answer=True)
+    )
+    (question,) = console.questions
+    assert "This will install 2 packages: alpha==2.1.0, gamma==0.3.0 into fake-env" in question
+    assert question.endswith("Continue?")
+    assert result.outcome is Outcome.INSTALLED and result.packages == PLAN.packages
+    assert installer.planned == [("alpha>=2",)] and installer.calls == [("alpha>=2",)]
+
+
+def test_when_pip_cannot_say_the_prompt_says_the_list_is_incomplete_not_that_it_is_exact():
+    _, _, console = run(RepairPolicy.PROMPT, installer=FakeInstaller(plan_result=InstallPlan()))
+    assert "alpha>=2 (and anything they depend on)" in console.questions[0]
+
+
+def test_declining_the_listed_install_installs_nothing_and_keeps_the_list_in_the_result():
+    result, installer, _ = run(
+        RepairPolicy.PROMPT, installer=FakeInstaller(plan_result=PLAN), console=FakeConsole(answer=False)
+    )
+    assert result.outcome is Outcome.DECLINED and result.packages == PLAN.packages
+    assert installer.calls == []
+
+
+def test_auto_still_announces_the_full_list_before_installing():
+    _, installer, console = run(RepairPolicy.AUTO, installer=FakeInstaller(plan_result=PLAN))
+    assert "Installing 2 packages: alpha==2.1.0, gamma==0.3.0 into fake-env" in console.messages[0]
+    assert console.questions == [] and installer.calls == [("alpha>=2",)]
+
+
+def test_off_and_non_interactive_prompt_never_ask_pip_anything():
+    for policy, console in ((RepairPolicy.OFF, FakeConsole()), (RepairPolicy.PROMPT, FakeConsole(is_interactive=False))):
+        _, installer, _ = run(policy, installer=FakeInstaller(plan_result=PLAN), console=console)
+        assert installer.planned == [] and installer.calls == []
+
+
+def test_a_single_package_is_not_pluralised():
+    _, _, console = run(
+        RepairPolicy.PROMPT, installer=FakeInstaller(plan_result=InstallPlan(("alpha==2.1.0",), known=True))
+    )
+    assert "1 package: alpha==2.1.0" in console.questions[0]
+
+
+def test_extras_default_to_none_and_are_passed_to_the_source_exactly_as_given():
+    source = FakeSource(["alpha>=2"], groups={"tracker": ["flask>=3"]})
+    heal_args = dict(policy=RepairPolicy.AUTO, manual_command=MANUAL)
+    repair(source, FakeEnvironment(), FakeInstaller(), FakeConsole(), **heal_args)
+    repair(source, FakeEnvironment(), FakeInstaller(), FakeConsole(), extras=("tracker",), **heal_args)
+    assert source.asked_extras == [(), ("tracker",)]
+
+
+def test_an_extra_adds_its_requirements_to_what_is_installed():
+    source = FakeSource(["alpha>=2"], groups={"tracker": ["flask>=3"]})
+    installer = FakeInstaller()
+    result = repair(source, FakeEnvironment({"alpha": "2.0"}), installer, FakeConsole(),
+                    policy=RepairPolicy.AUTO, manual_command=MANUAL, extras=("tracker",))
+    assert installer.calls == [("flask>=3",)] and result.outcome is Outcome.INSTALLED
+
+
+def test_an_unknown_extra_is_a_visible_check_failure():
+    installer, console = FakeInstaller(), FakeConsole()
+    failed = repair(FakeSource(["alpha>=2"]), FakeEnvironment(), installer, console,
+                    policy=RepairPolicy.AUTO, manual_command=MANUAL, extras=("nope",))
+    assert failed.outcome is Outcome.CHECK_FAILED and "nope" in console.messages[-1] and installer.calls == []

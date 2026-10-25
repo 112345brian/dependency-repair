@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dependency-repair"
-version = "0.1.0"
+version = "0.2.0"
 description = "Install the dependencies an editable install is missing, under an explicit policy (auto, prompt, off), through ports."
 readme = "README.md"
 requires-python = ">=3.11"
@@ -70,7 +70,7 @@ external = ["@pure"]
 
 [tool.archlint.ring.adapters]
 may_import = ["domain", "ports"]
-external = ["@pure", "importlib", "json", "pathlib", "re", "subprocess", "sys", "tomllib", "urllib"]
+external = ["@pure", "importlib", "json", "pathlib", "re", "subprocess", "sys", "tempfile", "tomllib", "urllib"]
 
 [tool.archlint.ring.composition]
 may_import = ["*"]

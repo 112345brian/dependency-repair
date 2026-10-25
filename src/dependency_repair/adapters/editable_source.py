@@ -9,7 +9,7 @@ from __future__ import annotations
 import importlib.metadata as metadata
 import json
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import cast
 from urllib.parse import unquote, urlparse
@@ -65,8 +65,8 @@ class EditableInstallSource:
         self._dist_name = dist_name
         self._read_direct_url = read_direct_url
 
-    def declared(self) -> list[str] | None:
+    def declared(self, extras: Sequence[str]) -> list[str] | None:
         checkout = editable_checkout(self._dist_name, self._read_direct_url)
         if checkout is None:
             return None
-        return PyprojectSource(checkout / "pyproject.toml").declared()
+        return PyprojectSource(checkout / "pyproject.toml").declared(extras)

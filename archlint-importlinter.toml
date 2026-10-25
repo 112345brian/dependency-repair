@@ -173,7 +173,6 @@ forbidden_modules = [
     "signal",
     "socket",
     "sqlite3",
-    "tempfile",
     "threading",
     "webbrowser",
 ]
